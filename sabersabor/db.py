@@ -1,9 +1,32 @@
 import psycopg2
 import psycopg2.extras
+
+import click
 from flask import current_app, g
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+def init_db():
+	# Get raw connection to execute SQL
+	conn = get_db_connection()
+	conn.autocommit = True
+
+	with conn.cursor() as cursor:
+		with current_app.open_resource('schema.sql') as f:
+			cursor.execute(f.read().decode('utf-8'))
+
+	# Conn is not closed here because it's managed by Flask app context
+
+@click.command('init-db')
+def init_db_command():
+	"""
+	Clear existing data and create new tables
+	"""
+	with current_app.app_context(): # Ensure existence of app context
+		init_db()
+		click.echo('Initialized database')
+
 
 def get_db():
 	"""
@@ -40,10 +63,8 @@ def close_db(e=None):
 		db_conn.close()
 
 def init_app(app):
-	# Initialize SQLAlchemy with the app
-	db.init_app(app)
-
 	# Register close_db function to be called when the application context ends
-	app.teardown_appcontext(close_db) 
+	app.teardown_appcontext(close_db)
+	app.cli.add_command(init_db_command)
 
 

@@ -8,7 +8,7 @@ def create_app(test_config=None):
 	app = Flask(__name__, instance_relative_config=True)
 	app.config.from_mapping(
 		SECRET_KEY='dev',
-		SQLALCHEMY_DATABASE_URI='postgresql://flaskuser:Geocache4571@localhost/sabersabor',
+		SQLALCHEMY_DATABASE_URI='postgresql://brian:Geocache4571@localhost/sabersabor',
 		SQLALCHEMY_TRACK_MODIFICATIONS=False
 	)
 
@@ -29,5 +29,8 @@ def create_app(test_config=None):
 	@app.route('/hello')
 	def hello():
 		return 'Hello World'
+
+	from . import db 
+	db.init_app(app)
 
 	return app

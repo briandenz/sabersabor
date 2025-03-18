@@ -9,6 +9,9 @@ instance/
 .coverage
 htmlcov/
 
+
+.DS_Store
+
 dist/
 data/
 build/
