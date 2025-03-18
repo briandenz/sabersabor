@@ -33,4 +33,7 @@ def create_app(test_config=None):
 	from . import db 
 	db.init_app(app)
 
+	from sabersabor.cli import import_recipes_command
+	app.cli.add_command(import_recipes_command)
+
 	return app
