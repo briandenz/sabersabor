@@ -1,10 +1,10 @@
 import psycopg2
 import psycopg2.extras
-
 import click
 from flask import current_app, g
 from flask_sqlalchemy import SQLAlchemy
 
+# Creation of app's singular SQLAlchemy db instance
 db = SQLAlchemy()
 
 def init_db():
@@ -63,6 +63,9 @@ def close_db(e=None):
 		db_conn.close()
 
 def init_app(app):
+	# Initialize SQLAlchemy app
+	db.init_app(app)
+
 	# Register close_db function to be called when the application context ends
 	app.teardown_appcontext(close_db)
 	app.cli.add_command(init_db_command)
