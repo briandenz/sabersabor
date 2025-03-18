@@ -27,58 +27,68 @@ def import_recipes(directory:str ='data/recipes_json'):
 		for filename in os.listdir(json_dir):
 			if not filename.endswith('.json'):
 				continue
+
+			if 'fixed' not in filename:
+				continue
 			
 			file_path = os.path.join(json_dir, filename)
 
 			# Load JSON recipe data
 			try:
 				with open(file_path, 'r') as f:
-					recipe_data = json.load(f)
+					data = json.load(f)
+				
+				# Make sure JSON file contains list of recipes
+				recipes_to_process = []
+				if isinstance(data, list):
+					recipes_to_process = data
+				else:
+					recipes_to_process = [data]
 
-				# Check if recipe exists in database
-				existing_recipe = Recipe.query.filter_by(url=recipe_data.get('url', '')).first()
+				# Loop through all recipes in .JSON
+				for recipe_data in recipes_to_process:
+					# Check if recipe exists in database
+					existing_recipe = Recipe.query.filter_by(url=recipe_data.get('url', '')).first()
+					if existing_recipe:
+						print(f'Recipe already exists: {recipe_data.get('title', 'Unknown')}')
+						continue
+					# Create Recipe object 
+					recipe = Recipe(
+						author=recipe_data.get('author', ''),
+						title=recipe_data.get('title', ''),
+						cook_time_minutes=recipe_data.get('cook_time_minutes', 0),
+						prep_time_minutes=recipe_data.get('prep_time_minutes', 0),
+						total_time_minutes=recipe_data.get('total_time_minutes', 0),
+						description=recipe_data.get('description', ''),
+						footnotes=recipe_data.get('footnotes', ''),
+						ingredients=json.dumps(recipe_data.get('ingredients', [])),
+						instructions=recipe_data.get('instructions', ''),
+						rating_stars=recipe_data.get('rating_stars', 0),
+						review_count=recipe_data.get('review_count', 0),
+						url=recipe_data.get('url', ''),
+						photo_url=recipe_data.get('photo_url', '')
+					)
 
-				if existing_recipe:
-					print(f'Recipe already exists: {recipe_data.get('title', 'Unknown')}')
-					continue
+					# Process ingredient list
+					ingredient_list = recipe_data.get('ingredients', [])
+					if isinstance(ingredient_list, list):
 
-				# Create Recipe object 
-				recipe = Recipe(
-					author=recipe_data.get('author', ''),
-					title=recipe_data.get('title', ''),
-					cook_time_minutes=recipe_data.get('cook_time_minutes', 0),
-					prep_time_minutes=recipe_data.get('prep_time_minutes', 0),
-					total_time_minutes=recipe_data.get('total_time_minutes', 0),
-					description=recipe_data.get('description', ''),
-					footnotes=recipe_data.get('footnotes', ''),
-					ingredients=json.dumps(recipe_data.get('ingredients', [])),
-					instructions=recipe_data.get('instructions', ''),
-					rating_stars=recipe_data.get('rating_stars', 0),
-					review_count=recipe_data.get('review_count', 0),
-					url=recipe_data.get('url', ''),
-					photo_url=recipe_data.get('photo_url', '')
-				)
+						for ingredient_name in ingredient_list:
 
-				# Process ingredient list
-				ingredient_list = recipe_data.get('ingredients', [])
-				if isinstance(ingredient_list, list):
+							# Search for existing ingredient, create new otherwise
+							ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
 
-					for ingredient_name in ingredient_list:
+							if not ingredient:
+								ingredient = Ingredient(name=ingredient_name)
+								db.session.add(ingredient)
 
-						# Search for existing ingredient, create new otherwise
-						ingredient = Ingredient.query.filter_by(name=ingredient_name).first()
+							# Add ingredient to recipe ingredient list
+							recipe.ingredient_list.append(ingredient)
 
-						if not ingredient:
-							ingredient = Ingredient(name=ingredient_name)
-							db.session.add(ingredient)
-
-						# Add ingredient to recipe ingredient list
-						recipe.ingredient_list.append(ingredient)
-
-				# Save recipe 
-				db.session.add(recipe)
-				db.session.commit()
-				imported_count += 1
+					# Save recipe 
+					db.session.add(recipe)
+					db.session.commit()
+					imported_count += 1
 
 			except Exception as e:
 				print(f'Error importing {filename}: {str(e)}')
